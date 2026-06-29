@@ -1,0 +1,15 @@
+{
+  "name": "PROSEGUR ATM Stock",
+  "short_name": "ATM Stock",
+  "description": "Gestión de stock de repuestos ATM",
+  "start_url": "/atm-sock/",
+  "display": "standalone",
+  "background_color": "#FFD633",
+  "theme_color": "#111124",
+  "orientation": "portrait-primary",
+  "lang": "es",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
