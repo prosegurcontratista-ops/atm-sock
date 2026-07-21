@@ -138,11 +138,26 @@ td{padding:10px 8px;white-space:nowrap}
 
   <div class="scroll-area">
     <div id="pane-fijo">
-      <div class="stats-row">
-        <div class="stat"><div class="stat-num ok" id="f-tec">—</div><div class="stat-lbl">técnicos</div></div>
+      <div id="fijo-login-box" style="padding:16px 12px">
+        <div class="region-card" style="padding:18px 16px">
+          <div style="font-size:16px;font-weight:700;color:#1a1a2e;margin-bottom:4px">Ingresá tu usuario</div>
+          <div style="font-size:13px;color:#6B5200;margin-bottom:14px">Necesitás loguearte para ver tu stock fijo</div>
+          <div class="mfield"><label>Usuario</label><input id="login-user" placeholder="Ej: jperez" autocomplete="off"></div>
+          <div class="mfield"><label>Contraseña</label><input id="login-pass" type="password" placeholder="••••••" autocomplete="off"></div>
+          <div id="login-error" style="color:#d32f2f;font-size:13px;margin-bottom:8px;display:none"></div>
+          <button class="confirm-btn" onclick="loginFijo()">Ingresar</button>
+        </div>
       </div>
-      <div class="section-label">Técnicos — tocá para ver partes</div>
-      <div id="fijo-list"></div>
+      <div id="fijo-content" style="display:none">
+        <div class="stats-row">
+          <div class="stat"><div class="stat-num ok" id="f-tec">—</div><div class="stat-lbl">técnicos</div></div>
+        </div>
+        <div class="section-label" style="display:flex;justify-content:space-between;align-items:center;padding-right:14px">
+          <span>Tu stock</span>
+          <span onclick="logoutFijo()" style="text-transform:none;font-weight:600;color:#B57400;cursor:pointer">Cerrar sesión</span>
+        </div>
+        <div id="fijo-list"></div>
+      </div>
     </div>
 
     <div id="pane-regional" style="display:none">
@@ -167,6 +182,19 @@ td{padding:10px 8px;white-space:nowrap}
     <div class="nav-item" onclick="cargarDatos();showToast('Actualizando...')"><i class="ti ti-refresh"></i><span>Refrescar</span></div>
     <div class="nav-item" onclick="showToast('Pedidos registrados en esta sesión')"><i class="ti ti-history"></i><span>Pedidos</span></div>
     <div class="nav-item" onclick="showToast('PROSEGUR ATM Stock v3')"><i class="ti ti-info-circle"></i><span>Info</span></div>
+  </div>
+</div>
+
+<!-- CLAVE REGIONAL/MOVIL -->
+<div class="modal-overlay" id="clave-overlay" onclick="handleClaveOverlay(event)">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Clave requerida</div>
+    <div class="modal-sub" id="clave-sub">Ingresá la clave para registrar uso</div>
+    <div class="mfield"><label>Clave</label><input id="clave-input" type="password" placeholder="••••••" autocomplete="off"></div>
+    <div id="clave-error" style="color:#d32f2f;font-size:13px;margin-bottom:8px;display:none"></div>
+    <button class="confirm-btn" onclick="verificarClave()">Confirmar</button>
+    <button class="cancel-btn" onclick="cerrarClave()">Cancelar</button>
   </div>
 </div>
 
@@ -240,9 +268,18 @@ let ff='todos', searchQ='', ex={};
 let curPn='', curBase='', curTipo='', curMax=0, curQty=1, curUnidades=0;
 let pendingOrder='';
 let pedidos=[];
+let claveePendiente = null;
+let fijoSession = null;
+try{ fijoSession = JSON.parse(localStorage.getItem('fijoSession')||'null'); }catch(e){ fijoSession = null; }
+
+async function sha256Hex(str){
+  const enc = new TextEncoder().encode(str);
+  const buf = await crypto.subtle.digest('SHA-256', enc);
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
 
 // ── UTILS ─────────────────────────────────────────────────────────────────────
-function estado(u,m){return u===0?'danger':u<m?'warn':'ok';}
+function estado(cant){return cant===0?'danger':'ok';}
 function genOrder(){return 'PED-'+new Date().getFullYear()+'-'+String(Math.floor(Math.random()*9000+1000));}
 function fmtDate(){return new Date().toLocaleString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});}
 function initials(name){return name.split(',')[0].trim().split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();}
@@ -287,8 +324,7 @@ function parseCSV(text){
     pn: headers.indexOf('PN'),
     base: headers.indexOf('BASESTOCK'),
     tipo: headers.indexOf('TIPO'),
-    cantmin: headers.indexOf('CANTMINIMA'),
-    unidades: headers.indexOf('UNIDADES'),
+    cant: headers.indexOf('CANT ASIGNADA'),
   };
   const rows = [];
   for(let i=1;i<rawLines.length;i++){
@@ -297,10 +333,9 @@ function parseCSV(text){
     const pn = (cols[idx.pn]||'').trim();
     const base = (cols[idx.base]||'').trim();
     const tipo = (cols[idx.tipo]||'').trim().toUpperCase();
-    const cantmin = parseInt(cols[idx.cantmin])||0;
-    const unidades = idx.unidades>=0 ? (parseInt(cols[idx.unidades])||0) : null;
+    const cant = idx.cant>=0 ? (parseInt(cols[idx.cant])||0) : 0;
     if(!pn||!base||!tipo) continue;
-    rows.push({pn, base, tipo, cantmin, unidades});
+    rows.push({pn, base, tipo, cant});
   }
   return rows;
 }
@@ -324,24 +359,121 @@ function agrupar(rows){
 async function cargarDatos(){
   const b=document.getElementById('syncbadge'), ic=document.getElementById('syncicon'), t=document.getElementById('synctxt');
   b.className='sync-badge syncing'; ic.className='ti ti-refresh'; t.textContent='Cargando...';
-  ['fijo','regional','movil'].forEach(p=>{
+  ['regional','movil'].forEach(p=>{
     document.getElementById(p+'-list').innerHTML='<div class="loading"><i class="ti ti-loader-2"></i>Cargando datos...</div>';
   });
   try{
-    const resp = await fetch(CSV_URL + '?t=' + Date.now());
+    const resp = await fetch(CSV_URL + '?action=stock&t=' + Date.now());
     if(!resp.ok) throw new Error('HTTP '+resp.status);
     const text = await resp.text();
     const rows = parseCSV(text);
     if(!rows.length) throw new Error('Sin datos');
-    DATA = agrupar(rows);
+    const ag = agrupar(rows);
+    DATA.regional = ag.regional;
+    DATA.movil = ag.movil;
     b.className='sync-badge'; ic.className='ti ti-check'; t.textContent='Actualizado';
     render();
-    showToast('Datos actualizados ('+rows.length+' filas)');
+    showToast('Datos actualizados');
   }catch(err){
     b.className='sync-badge error'; ic.className='ti ti-alert-triangle'; t.textContent='Error';
-    ['fijo','regional','movil'].forEach(p=>{
+    ['regional','movil'].forEach(p=>{
       document.getElementById(p+'-list').innerHTML='<div class="empty"><i class="ti ti-cloud-off"></i>No se pudo cargar.<br>Revisá la conexión y tocá "Actualizar".<br><br><span style="font-size:11px;color:#555">'+err.message+'</span></div>';
     });
+  }
+  intentarSesionFijo();
+}
+
+// ── SESIÓN FIJO (login por técnico) ────────────────────────────────────────────
+function mostrarFijoLogin(mensaje){
+  document.getElementById('fijo-login-box').style.display='block';
+  document.getElementById('fijo-content').style.display='none';
+  const err=document.getElementById('login-error');
+  if(mensaje){err.textContent=mensaje;err.style.display='block';}
+  else{err.style.display='none';}
+}
+function mostrarFijoContent(){
+  document.getElementById('fijo-login-box').style.display='none';
+  document.getElementById('fijo-content').style.display='block';
+}
+
+async function loginFijo(){
+  const usuario=document.getElementById('login-user').value.trim();
+  const pass=document.getElementById('login-pass').value;
+  if(!usuario||!pass){ mostrarFijoLogin('Completá usuario y contraseña'); return; }
+  const hash = await sha256Hex(pass);
+  try{
+    const resp = await fetch(CSV_URL+'?action=login&usuario='+encodeURIComponent(usuario)+'&hash='+hash+'&t='+Date.now());
+    const data = await resp.json();
+    if(!data.ok){ mostrarFijoLogin('Usuario o contraseña incorrectos'); return; }
+    fijoSession = {usuario, hash, basestock:data.basestock};
+    localStorage.setItem('fijoSession', JSON.stringify(fijoSession));
+    const rows = parseCSV(data.csv||'');
+    DATA.fijo = agrupar(rows).fijo;
+    mostrarFijoContent();
+    render();
+    showToast('Bienvenido, '+data.basestock);
+  }catch(err){
+    mostrarFijoLogin('Error de conexión, probá de nuevo');
+  }
+}
+
+function logoutFijo(){
+  localStorage.removeItem('fijoSession');
+  fijoSession=null;
+  DATA.fijo=[];
+  document.getElementById('login-user').value='';
+  document.getElementById('login-pass').value='';
+  mostrarFijoLogin();
+}
+
+async function intentarSesionFijo(){
+  if(!fijoSession){ mostrarFijoLogin(); return; }
+  try{
+    const resp = await fetch(CSV_URL+'?action=login&usuario='+encodeURIComponent(fijoSession.usuario)+'&hash='+fijoSession.hash+'&t='+Date.now());
+    const data = await resp.json();
+    if(!data.ok){ logoutFijo(); return; }
+    const rows = parseCSV(data.csv||'');
+    DATA.fijo = agrupar(rows).fijo;
+    mostrarFijoContent();
+    render();
+  }catch(err){
+    if(DATA.fijo.length){ mostrarFijoContent(); render(); }
+    else mostrarFijoLogin('No se pudo verificar la sesión, revisá tu conexión');
+  }
+}
+
+// ── CLAVE REGIONAL/MÓVIL (para registrar uso) ──────────────────────────────────
+function pedirClave(pn, base, tipo, cant){
+  claveePendiente = {pn, base, tipo, cant};
+  document.getElementById('clave-sub').textContent = 'Ingresá la clave de '+base+' para registrar uso';
+  document.getElementById('clave-input').value='';
+  document.getElementById('clave-error').style.display='none';
+  document.getElementById('clave-overlay').classList.add('open');
+  setTimeout(()=>document.getElementById('clave-input').focus(),300);
+}
+function cerrarClave(){
+  document.getElementById('clave-overlay').classList.remove('open');
+  claveePendiente = null;
+}
+function handleClaveOverlay(e){ if(e.target===document.getElementById('clave-overlay')) cerrarClave(); }
+
+async function verificarClave(){
+  if(!claveePendiente) return;
+  const clave = document.getElementById('clave-input').value;
+  const err = document.getElementById('clave-error');
+  if(!clave){ err.textContent='Ingresá la clave'; err.style.display='block'; return; }
+  const hash = await sha256Hex(clave);
+  const tipoParam = claveePendiente.tipo.includes('REGIONAL') ? 'REGIONAL' : 'MOVIL';
+  try{
+    const resp = await fetch(CSV_URL+'?action=verificarclave&tipo='+tipoParam+'&basestock='+encodeURIComponent(claveePendiente.base)+'&hash='+hash+'&t='+Date.now());
+    const data = await resp.json();
+    if(!data.ok){ err.textContent='Clave incorrecta'; err.style.display='block'; return; }
+    const p = claveePendiente;
+    cerrarClave();
+    openModal(p.pn, p.base, p.tipo, p.cant);
+  }catch(e){
+    err.textContent='Error de conexión, probá de nuevo';
+    err.style.display='block';
   }
 }
 
@@ -349,35 +481,33 @@ async function cargarDatos(){
 const COLORS={'SR Cordoba':'#378ADD','Stock Cordoba':'#378ADD','SR Mar Del Plata':'#E91E63','Stock Mar Del Plata':'#E91E63','SR Mendoza':'#FFB800','Stock Mendoza':'#FFB800','SR Patagonia':'#607D8B','Stock Patagonia':'#607D8B','SR Posadas':'#FF5722','Stock Posadas':'#FF5722','SR Resistencia':'#9C27B0','Stock Resistencia':'#9C27B0','SR Rosario':'#4caf50','Stock Rosario':'#4caf50','SR Santa Fe':'#00BCD4','Stock Santa Fe':'#00BCD4','SR Tucuman':'#D85A30','Stock Tucuman':'#D85A30','Stock Movil 1':'#FFB800','Stock Movil 2':'#378ADD','Stock Movil 3':'#4caf50'};
 
 function calcGrupoStats(grupos){
-  let warn=0, danger=0;
+  let danger=0;
   grupos.forEach(g=>g.partes.forEach(p=>{
-    if(p.unidades===null) return;
-    const e=estado(p.unidades,p.cantmin);
-    if(e==='warn')warn++; if(e==='danger')danger++;
+    if(estado(p.cant)==='danger')danger++;
   }));
-  return {warn, danger};
+  return {danger};
 }
 
-function tablaPartes(grupo, tipo, usable){
+function tablaPartes(grupo, tipo, usable, requiereClave){
   const q=searchQ;
   const partes = q&&!grupo.nombre.toLowerCase().includes(q) ? grupo.partes.filter(p=>p.pn.toLowerCase().includes(q)) : grupo.partes;
-  const tieneUnidades = partes.some(p=>p.unidades!==null);
-  let head = '<thead><tr><th style="font-size:12px">PN</th><th>TIPO</th><th style="text-align:center">MÍN</th>';
-  if(tieneUnidades) head += '<th style="text-align:center">STOCK</th>';
+  let head = '<thead><tr><th style="font-size:12px">PN</th><th>TIPO</th><th style="text-align:center">CANT ASIGNADA</th>';
   if(usable) head += '<th style="text-align:center">USO</th>';
   head += '</tr></thead>';
   const body = partes.map((p,i)=>{
-    const e = p.unidades!==null ? estado(p.unidades,p.cantmin) : 'ok';
-    const col = e==='danger'?'#d32f2f':e==='warn'?'#B57400':'#1a1a2e';
+    const e = estado(p.cant);
+    const col = e==='danger'?'#d32f2f':'#1a1a2e';
     const bg = i%2===0?'#ffffff':'#FFF4D6';
     let row = `<tr style="background:${bg};border-bottom:0.5px solid #EAD080">`;
     row += `<td style="font-family:'Courier New',monospace;font-size:16px;font-weight:700;color:#B57400">${p.pn}</td>`;
     row += `<td style="font-size:13px;color:#999">${tipo}</td>`;
-    row += `<td style="text-align:center;font-size:15px;color:#666">${p.cantmin}</td>`;
-    if(tieneUnidades) row += `<td style="text-align:center;font-size:16px;font-weight:700;color:${col}">${p.unidades!==null?p.unidades:'—'}</td>`;
+    row += `<td style="text-align:center;font-size:16px;font-weight:700;color:${col}">${p.cant}</td>`;
     if(usable){
       const pnEsc=p.pn.replace(/'/g,"\\'"), baseEsc=grupo.nombre.replace(/'/g,"\\'");
-      row += `<td style="text-align:center"><button class="ftag" style="background:#1a1600;color:#FFB800;border-color:#5a4400;font-size:13px;padding:6px 12px" onclick="openModal('${pnEsc}','${baseEsc}','${tipo}',${p.cantmin},${p.unidades===null?-1:p.unidades})">🔧 Usar</button></td>`;
+      const accion = requiereClave
+        ? `pedirClave('${pnEsc}','${baseEsc}','${tipo}',${p.cant})`
+        : `openModal('${pnEsc}','${baseEsc}','${tipo}',${p.cant})`;
+      row += `<td style="text-align:center"><button class="ftag" style="background:#1a1600;color:#FFB800;border-color:#5a4400;font-size:13px;padding:6px 12px" onclick="${accion}">🔧 Usar</button></td>`;
     }
     row += '</tr>';
     return row;
@@ -385,7 +515,7 @@ function tablaPartes(grupo, tipo, usable){
   return `<div style="overflow-x:auto"><table>${head}<tbody>${body}</tbody></table></div>`;
 }
 
-function renderGrupo(grupo, tipo, prefix, usable, useAvatar){
+function renderGrupo(grupo, tipo, prefix, usable, useAvatar, requiereClave){
   const q=searchQ;
   const partesFiltradas = q&&!grupo.nombre.toLowerCase().includes(q) ? grupo.partes.filter(p=>p.pn.toLowerCase().includes(q)) : grupo.partes;
   if(q && !partesFiltradas.length) return '';
@@ -402,11 +532,10 @@ function renderGrupo(grupo, tipo, prefix, usable, useAvatar){
       </div>
       <div class="region-right">
         ${st.danger?`<span class="reg-badge danger">${st.danger}</span>`:''}
-        ${st.warn?`<span class="reg-badge warn">${st.warn}</span>`:''}
         <i class="ti ${isOpen?'ti-chevron-up':'ti-chevron-down'}" style="font-size:18px;color:#444"></i>
       </div>
     </div>
-    ${isOpen?tablaPartes(grupo,tipo,usable):''}
+    ${isOpen?tablaPartes(grupo,tipo,usable,requiereClave):''}
   </div>`;
 }
 
@@ -414,25 +543,22 @@ function render(){
   let fijo = DATA.fijo;
   const q=searchQ;
   if(q) fijo = fijo.filter(g=>g.nombre.toLowerCase().includes(q)||g.partes.some(p=>p.pn.toLowerCase().includes(q)));
-  if(ff!=='todos'){
-    fijo = fijo.filter(g=>g.partes.some(p=>p.unidades!==null&&estado(p.unidades,p.cantmin)===ff));
-  }
   document.getElementById('fijo-list').innerHTML = fijo.length
-    ? fijo.map(g=>renderGrupo(g,'STOCK FIJO','f_',true,true)).join('')
+    ? fijo.map(g=>renderGrupo(g,'STOCK FIJO','f_',true,true,false)).join('')
     : '<div class="empty"><i class="ti ti-user-off"></i>Sin resultados</div>';
   document.getElementById('f-tec').textContent=DATA.fijo.length;
 
   let reg = DATA.regional;
   if(q) reg = reg.filter(g=>g.nombre.toLowerCase().includes(q)||g.partes.some(p=>p.pn.toLowerCase().includes(q)));
   document.getElementById('regional-list').innerHTML = reg.length
-    ? reg.map(g=>renderGrupo(g,'STOCK REGIONAL','r_',true,false)).join('')
+    ? reg.map(g=>renderGrupo(g,'STOCK REGIONAL','r_',true,false,true)).join('')
     : '<div class="empty"><i class="ti ti-map-off"></i>Sin resultados</div>';
   document.getElementById('r-reg').textContent=DATA.regional.length;
 
   let mov = DATA.movil;
   if(q) mov = mov.filter(g=>g.nombre.toLowerCase().includes(q)||g.partes.some(p=>p.pn.toLowerCase().includes(q)));
   document.getElementById('movil-list').innerHTML = mov.length
-    ? mov.map(g=>renderGrupo(g,'STOCK MOVIL','m_',true,false)).join('')
+    ? mov.map(g=>renderGrupo(g,'STOCK MOVIL','m_',true,false,true)).join('')
     : '<div class="empty"><i class="ti ti-truck-off"></i>Sin resultados</div>';
   document.getElementById('m-mov').textContent=DATA.movil.length;
 }
@@ -443,21 +569,22 @@ function onSearch(v){searchQ=v.toLowerCase();render();}
 function switchTab(t){['fijo','regional','movil'].forEach(x=>{document.getElementById('tab-'+x).classList.toggle('active',x===t);document.getElementById('pane-'+x).style.display=x===t?'block':'none';});}
 
 // ── MODAL ─────────────────────────────────────────────────────────────────────
-function openModal(pn,base,tipo,cantmin,unidades){
-  curPn=pn;curBase=base;curTipo=tipo;curMax=unidades>0?unidades:99;curQty=1;curUnidades=unidades;
+function openModal(pn,base,tipo,cant){
+  curPn=pn;curBase=base;curTipo=tipo;curMax=cant>0?cant:99;curQty=1;curUnidades=cant;
   pendingOrder=genOrder();
   document.getElementById('m-order').textContent=pendingOrder;
   document.getElementById('m-pn').textContent=pn;
   document.getElementById('m-base').textContent=base+' · '+tipo;
   document.getElementById('m-qty').textContent=1;
-  document.getElementById('m-avail').innerHTML = unidades>=0 ? 'disponibles: <span>'+unidades+'</span>' : 'mín: <span>'+cantmin+'</span>';
+  document.getElementById('m-avail').innerHTML = 'asignadas: <span>'+cant+'</span>';
   document.getElementById('m-atm').value='';
-  document.getElementById('m-tecnico').value='';
+  document.getElementById('m-tecnico').value = (tipo.includes('FIJO') && fijoSession) ? fijoSession.basestock : '';
   document.getElementById('m-obs').value='';
   document.getElementById('m-email').value='deposito@prosegur.com';
   document.getElementById('confirm-btn').disabled=true;
   document.getElementById('modal-overlay').classList.add('open');
   setTimeout(()=>document.getElementById('m-atm').focus(),300);
+  checkForm();
 }
 function closeModal(){document.getElementById('modal-overlay').classList.remove('open');}
 function handleOverlay(e){if(e.target===document.getElementById('modal-overlay'))closeModal();}
@@ -474,7 +601,7 @@ function confirmar(){
   for(const g of DATA[curTipo.includes('FIJO')?'fijo':curTipo.includes('REGIONAL')?'regional':'movil']){
     if(g.nombre===curBase){
       const p=g.partes.find(x=>x.pn===curPn);
-      if(p&&p.unidades!==null){p.unidades=Math.max(0,p.unidades-curQty);resto=p.unidades+' u';}
+      if(p){p.cant=Math.max(0,p.cant-curQty);resto=p.cant+' u';}
     }
   }
   lastPedido={order:pendingOrder,pn:curPn,base:curBase,tipo:curTipo,qty:curQty,atm,tec,email,obs,fecha:fmtDate(),resto};
@@ -519,4 +646,5 @@ function closeSuccess(){document.getElementById('success-overlay').classList.rem
 cargarDatos();
 </script>
 </body></html>
+
 
