@@ -252,7 +252,8 @@ td{padding:10px 8px;white-space:nowrap}
     <button class="close-btn" id="email-btn" onclick="abrirEmail()" style="margin-bottom:10px;background:#1a2e1a;color:#4caf50;border:0.5px solid #2e4a2e">
       <i class="ti ti-mail" style="vertical-align:-2px;margin-right:4px"></i>Enviar email de reposición
     </button>
-    <button class="close-btn" onclick="closeSuccess()">Volver al stock</button>
+    <button class="close-btn" onclick="closeSuccess()">Volver al listado de partes</button>
+    <button class="cancel-btn" onclick="salirAInicio()">Salir a la página principal</button>
   </div>
 </div>
 
@@ -519,6 +520,7 @@ function renderGrupo(grupo, tipo, prefix, usable, useAvatar, requiereClave){
   const q=searchQ;
   const partesFiltradas = q&&!grupo.nombre.toLowerCase().includes(q) ? grupo.partes.filter(p=>p.pn.toLowerCase().includes(q)) : grupo.partes;
   if(q && !partesFiltradas.length) return '';
+  const totalUnidades = partesFiltradas.reduce((sum,p)=>sum+(p.cant||0),0);
   const isOpen=!!ex[prefix+grupo.nombre];
   const st=calcGrupoStats([grupo]);
   const color=COLORS[grupo.nombre]||'#888';
@@ -528,7 +530,7 @@ function renderGrupo(grupo, tipo, prefix, usable, useAvatar, requiereClave){
   return `<div class="region-card">
     <div class="region-header" onclick="tog('${prefix}','${encodeURIComponent(grupo.nombre)}')">
       <div class="region-left">${izq}
-        <div><div class="region-name">${grupo.nombre}</div><div class="region-sub">${partesFiltradas.length} partes</div></div>
+        <div><div class="region-name">${grupo.nombre}</div><div class="region-sub">${totalUnidades} unidades</div></div>
       </div>
       <div class="region-right">
         ${st.danger?`<span class="reg-badge danger">${st.danger}</span>`:''}
@@ -642,8 +644,17 @@ function abrirEmail(){
 
 function closeSuccess(){document.getElementById('success-overlay').classList.remove('open');}
 
+function salirAInicio(){
+  document.getElementById('success-overlay').classList.remove('open');
+  ex = {};
+  searchQ = '';
+  document.getElementById('searchinput').value = '';
+  render();
+  switchTab('fijo');
+  document.querySelector('.scroll-area').scrollTop = 0;
+}
+
 // ── INIT ──────────────────────────────────────────────────────────────────────
 cargarDatos();
 </script>
 </body></html>
-
