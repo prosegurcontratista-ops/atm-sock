@@ -432,8 +432,8 @@ function calcGrupoStatsSimple(grupos){
 function tablaPartes(grupo, tipo, usable, requiereClave, extendida){
   const q=searchQ;
   const partes = q&&!grupo.nombre.toLowerCase().includes(q) ? grupo.partes.filter(p=>p.pn.toLowerCase().includes(q)) : grupo.partes;
-  let head = '<thead><tr><th style="font-size:12px">PN</th>';
-  if(extendida) head += '<th>DESCRIPCIÓN</th><th style="text-align:center">QR</th><th style="text-align:center">ESTANTERÍA</th>';
+  let head = '<thead><tr><th style="font-size:12px">PN</th><th>DESCRIPCIÓN</th>';
+  if(extendida) head += '<th style="text-align:center">QR</th><th style="text-align:center">ESTANTERÍA</th>';
   head += '<th style="text-align:center">EXISTENCIA</th>';
   if(usable) head += '<th style="text-align:center">USO</th>';
   head += '</tr></thead>';
@@ -443,8 +443,8 @@ function tablaPartes(grupo, tipo, usable, requiereClave, extendida){
     const bg = i%2===0?'#ffffff':'#FFF4D6';
     let row = `<tr style="background:${bg};border-bottom:0.5px solid #EAD080">`;
     row += `<td style="font-family:'Courier New',monospace;font-size:16px;font-weight:700;color:#B57400">${p.pn}</td>`;
+    row += `<td style="font-size:13px;color:#555;max-width:160px;white-space:normal">${p.descripcion||'—'}</td>`;
     if(extendida){
-      row += `<td style="font-size:13px;color:#555;max-width:160px;white-space:normal">${p.descripcion||'—'}</td>`;
       row += `<td style="text-align:center;font-size:13px;color:#999;font-family:'Courier New',monospace">${p.qr||'—'}</td>`;
       row += `<td style="text-align:center;font-size:13px;color:#666">${p.estanteria||'—'}</td>`;
     }
