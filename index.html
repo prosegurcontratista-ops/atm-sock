@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="es"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
@@ -139,26 +138,11 @@ td{padding:10px 8px;white-space:nowrap}
 
   <div class="scroll-area">
     <div id="pane-fijo">
-      <div id="fijo-login-box" style="padding:16px 12px">
-        <div class="region-card" style="padding:18px 16px">
-          <div style="font-size:16px;font-weight:700;color:#1a1a2e;margin-bottom:4px">Ingresá tu usuario</div>
-          <div style="font-size:13px;color:#6B5200;margin-bottom:14px">Necesitás loguearte para ver tu stock fijo</div>
-          <div class="mfield"><label>Usuario</label><input id="login-user" placeholder="Ej: jperez" autocomplete="off"></div>
-          <div class="mfield"><label>Contraseña</label><input id="login-pass" type="password" placeholder="••••••" autocomplete="off"></div>
-          <div id="login-error" style="color:#d32f2f;font-size:13px;margin-bottom:8px;display:none"></div>
-          <button class="confirm-btn" onclick="loginFijo()">Ingresar</button>
-        </div>
+      <div class="stats-row">
+        <div class="stat"><div class="stat-num ok" id="f-tec">—</div><div class="stat-lbl">técnicos</div></div>
       </div>
-      <div id="fijo-content" style="display:none">
-        <div class="stats-row">
-          <div class="stat"><div class="stat-num ok" id="f-tec">—</div><div class="stat-lbl">técnicos</div></div>
-        </div>
-        <div class="section-label" style="display:flex;justify-content:space-between;align-items:center;padding-right:14px">
-          <span>Tu stock</span>
-          <span onclick="logoutFijo()" style="text-transform:none;font-weight:600;color:#B57400;cursor:pointer">Cerrar sesión</span>
-        </div>
-        <div id="fijo-list"></div>
-      </div>
+      <div class="section-label">Técnicos — tocá para ver sus partes</div>
+      <div id="fijo-list"></div>
     </div>
 
     <div id="pane-regional" style="display:none">
@@ -271,9 +255,6 @@ let curPn='', curBase='', curTipo='', curMax=0, curQty=1, curUnidades=0;
 let pendingOrder='';
 let pedidos=[];
 let claveePendiente = null;
-let fijoSession = null;
-try{ fijoSession = JSON.parse(localStorage.getItem('fijoSession')||'null'); }catch(e){ fijoSession = null; }
-
 async function sha256Hex(str){
   const enc = new TextEncoder().encode(str);
   const buf = await crypto.subtle.digest('SHA-256', enc);
@@ -281,7 +262,7 @@ async function sha256Hex(str){
 }
 
 // ── UTILS ─────────────────────────────────────────────────────────────────────
-function estado(cant){return cant===0?'danger':'ok';}
+function estado(existencia,cantmin){return existencia===0?'danger':existencia<cantmin?'warn':'ok';}
 function genOrder(){return 'PED-'+new Date().getFullYear()+'-'+String(Math.floor(Math.random()*9000+1000));}
 function fmtDate(){return new Date().toLocaleString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});}
 function initials(name){return name.split(',')[0].trim().split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();}
@@ -324,20 +305,28 @@ function parseCSV(text){
   const headers = parseCSVLine(rawLines[0]).map(h=>h.trim().toUpperCase());
   const idx = {
     pn: headers.indexOf('PN'),
+    qr: headers.indexOf('QR'),
+    descripcion: headers.indexOf('DESCRIPCION'),
     base: headers.indexOf('BASESTOCK'),
     tipo: headers.indexOf('TIPO'),
-    cant: headers.indexOf('CANT ASIGNADA'),
+    cantmin: headers.indexOf('CANTMINIMA'),
+    estanteria: headers.indexOf('ESTANTERIA'),
+    existencia: headers.indexOf('EXISTENCIA'),
   };
   const rows = [];
   for(let i=1;i<rawLines.length;i++){
     const cols = parseCSVLine(rawLines[i]);
     if(cols.length < 3) continue;
     const pn = (cols[idx.pn]||'').trim();
+    const qr = idx.qr>=0 ? (cols[idx.qr]||'').trim() : '';
+    const descripcion = idx.descripcion>=0 ? (cols[idx.descripcion]||'').trim() : '';
     const base = (cols[idx.base]||'').trim();
     const tipo = (cols[idx.tipo]||'').trim().toUpperCase();
-    const cant = idx.cant>=0 ? (parseInt(cols[idx.cant])||0) : 0;
+    const cantmin = idx.cantmin>=0 ? (parseInt(cols[idx.cantmin])||0) : 0;
+    const estanteria = idx.estanteria>=0 ? (cols[idx.estanteria]||'').trim() : '';
+    const existencia = idx.existencia>=0 ? (parseInt(cols[idx.existencia])||0) : 0;
     if(!pn||!base||!tipo) continue;
-    rows.push({pn, base, tipo, cant});
+    rows.push({pn, qr, descripcion, base, tipo, cantmin, estanteria, existencia});
   }
   return rows;
 }
@@ -361,7 +350,7 @@ function agrupar(rows){
 async function cargarDatos(){
   const b=document.getElementById('syncbadge'), ic=document.getElementById('syncicon'), t=document.getElementById('synctxt');
   b.className='sync-badge syncing'; ic.className='ti ti-refresh'; t.textContent='Cargando...';
-  ['regional','movil'].forEach(p=>{
+  ['fijo','regional','movil'].forEach(p=>{
     document.getElementById(p+'-list').innerHTML='<div class="loading"><i class="ti ti-loader-2"></i>Cargando datos...</div>';
   });
   try{
@@ -371,6 +360,7 @@ async function cargarDatos(){
     const rows = parseCSV(text);
     if(!rows.length) throw new Error('Sin datos');
     const ag = agrupar(rows);
+    DATA.fijo = ag.fijo;
     DATA.regional = ag.regional;
     DATA.movil = ag.movil;
     b.className='sync-badge'; ic.className='ti ti-check'; t.textContent='Actualizado';
@@ -378,69 +368,9 @@ async function cargarDatos(){
     showToast('Datos actualizados');
   }catch(err){
     b.className='sync-badge error'; ic.className='ti ti-alert-triangle'; t.textContent='Error';
-    ['regional','movil'].forEach(p=>{
+    ['fijo','regional','movil'].forEach(p=>{
       document.getElementById(p+'-list').innerHTML='<div class="empty"><i class="ti ti-cloud-off"></i>No se pudo cargar.<br>Revisá la conexión y tocá "Actualizar".<br><br><span style="font-size:11px;color:#555">'+err.message+'</span></div>';
     });
-  }
-  intentarSesionFijo();
-}
-
-// ── SESIÓN FIJO (login por técnico) ────────────────────────────────────────────
-function mostrarFijoLogin(mensaje){
-  document.getElementById('fijo-login-box').style.display='block';
-  document.getElementById('fijo-content').style.display='none';
-  const err=document.getElementById('login-error');
-  if(mensaje){err.textContent=mensaje;err.style.display='block';}
-  else{err.style.display='none';}
-}
-function mostrarFijoContent(){
-  document.getElementById('fijo-login-box').style.display='none';
-  document.getElementById('fijo-content').style.display='block';
-}
-
-async function loginFijo(){
-  const usuario=document.getElementById('login-user').value.trim();
-  const pass=document.getElementById('login-pass').value;
-  if(!usuario||!pass){ mostrarFijoLogin('Completá usuario y contraseña'); return; }
-  const hash = await sha256Hex(pass);
-  try{
-    const resp = await fetch(CSV_URL+'?action=login&usuario='+encodeURIComponent(usuario)+'&hash='+hash+'&t='+Date.now());
-    const data = await resp.json();
-    if(!data.ok){ mostrarFijoLogin('Usuario o contraseña incorrectos'); return; }
-    fijoSession = {usuario, hash, basestock:data.basestock};
-    localStorage.setItem('fijoSession', JSON.stringify(fijoSession));
-    const rows = parseCSV(data.csv||'');
-    DATA.fijo = agrupar(rows).fijo;
-    mostrarFijoContent();
-    render();
-    showToast('Bienvenido, '+data.basestock);
-  }catch(err){
-    mostrarFijoLogin('Error de conexión, probá de nuevo');
-  }
-}
-
-function logoutFijo(){
-  localStorage.removeItem('fijoSession');
-  fijoSession=null;
-  DATA.fijo=[];
-  document.getElementById('login-user').value='';
-  document.getElementById('login-pass').value='';
-  mostrarFijoLogin();
-}
-
-async function intentarSesionFijo(){
-  if(!fijoSession){ mostrarFijoLogin(); return; }
-  try{
-    const resp = await fetch(CSV_URL+'?action=login&usuario='+encodeURIComponent(fijoSession.usuario)+'&hash='+fijoSession.hash+'&t='+Date.now());
-    const data = await resp.json();
-    if(!data.ok){ logoutFijo(); return; }
-    const rows = parseCSV(data.csv||'');
-    DATA.fijo = agrupar(rows).fijo;
-    mostrarFijoContent();
-    render();
-  }catch(err){
-    if(DATA.fijo.length){ mostrarFijoContent(); render(); }
-    else mostrarFijoLogin('No se pudo verificar la sesión, revisá tu conexión');
   }
 }
 
@@ -483,32 +413,47 @@ async function verificarClave(){
 const COLORS={'SR Cordoba':'#378ADD','Stock Cordoba':'#378ADD','SR Mar Del Plata':'#E91E63','Stock Mar Del Plata':'#E91E63','SR Mendoza':'#FFB800','Stock Mendoza':'#FFB800','SR Patagonia':'#607D8B','Stock Patagonia':'#607D8B','SR Posadas':'#FF5722','Stock Posadas':'#FF5722','SR Resistencia':'#9C27B0','Stock Resistencia':'#9C27B0','SR Rosario':'#4caf50','Stock Rosario':'#4caf50','SR Santa Fe':'#00BCD4','Stock Santa Fe':'#00BCD4','SR Tucuman':'#D85A30','Stock Tucuman':'#D85A30','Stock Movil 1':'#FFB800','Stock Movil 2':'#378ADD','Stock Movil 3':'#4caf50'};
 
 function calcGrupoStats(grupos){
-  let danger=0;
+  let warn=0, danger=0;
   grupos.forEach(g=>g.partes.forEach(p=>{
-    if(estado(p.cant)==='danger')danger++;
+    const e=estado(p.existencia,p.cantmin);
+    if(e==='warn')warn++; if(e==='danger')danger++;
   }));
-  return {danger};
+  return {warn, danger};
 }
 
-function tablaPartes(grupo, tipo, usable, requiereClave){
+function calcGrupoStatsSimple(grupos){
+  let danger=0;
+  grupos.forEach(g=>g.partes.forEach(p=>{
+    if((p.existencia||0)===0)danger++;
+  }));
+  return {warn:0, danger};
+}
+
+function tablaPartes(grupo, tipo, usable, requiereClave, extendida){
   const q=searchQ;
   const partes = q&&!grupo.nombre.toLowerCase().includes(q) ? grupo.partes.filter(p=>p.pn.toLowerCase().includes(q)) : grupo.partes;
-  let head = '<thead><tr><th style="font-size:12px">PN</th><th>TIPO</th><th style="text-align:center">CANT ASIGNADA</th>';
+  let head = '<thead><tr><th style="font-size:12px">PN</th>';
+  if(extendida) head += '<th>DESCRIPCIÓN</th><th style="text-align:center">QR</th><th style="text-align:center">ESTANTERÍA</th>';
+  head += '<th style="text-align:center">EXISTENCIA</th>';
   if(usable) head += '<th style="text-align:center">USO</th>';
   head += '</tr></thead>';
   const body = partes.map((p,i)=>{
-    const e = estado(p.cant);
-    const col = e==='danger'?'#d32f2f':'#1a1a2e';
+    const e = extendida ? estado(p.existencia,p.cantmin) : ((p.existencia||0)===0?'danger':'ok');
+    const col = e==='danger'?'#d32f2f':e==='warn'?'#B57400':'#1a1a2e';
     const bg = i%2===0?'#ffffff':'#FFF4D6';
     let row = `<tr style="background:${bg};border-bottom:0.5px solid #EAD080">`;
     row += `<td style="font-family:'Courier New',monospace;font-size:16px;font-weight:700;color:#B57400">${p.pn}</td>`;
-    row += `<td style="font-size:13px;color:#999">${tipo}</td>`;
-    row += `<td style="text-align:center;font-size:16px;font-weight:700;color:${col}">${p.cant}</td>`;
+    if(extendida){
+      row += `<td style="font-size:13px;color:#555;max-width:160px;white-space:normal">${p.descripcion||'—'}</td>`;
+      row += `<td style="text-align:center;font-size:13px;color:#999;font-family:'Courier New',monospace">${p.qr||'—'}</td>`;
+      row += `<td style="text-align:center;font-size:13px;color:#666">${p.estanteria||'—'}</td>`;
+    }
+    row += `<td style="text-align:center;font-size:16px;font-weight:700;color:${col}">${p.existencia}</td>`;
     if(usable){
       const pnEsc=p.pn.replace(/'/g,"\\'"), baseEsc=grupo.nombre.replace(/'/g,"\\'");
       const accion = requiereClave
-        ? `pedirClave('${pnEsc}','${baseEsc}','${tipo}',${p.cant})`
-        : `openModal('${pnEsc}','${baseEsc}','${tipo}',${p.cant})`;
+        ? `pedirClave('${pnEsc}','${baseEsc}','${tipo}',${p.existencia})`
+        : `openModal('${pnEsc}','${baseEsc}','${tipo}',${p.existencia})`;
       row += `<td style="text-align:center"><button class="ftag" style="background:#1a1600;color:#FFB800;border-color:#5a4400;font-size:13px;padding:6px 12px" onclick="${accion}">🔧 Usar</button></td>`;
     }
     row += '</tr>';
@@ -517,13 +462,13 @@ function tablaPartes(grupo, tipo, usable, requiereClave){
   return `<div style="overflow-x:auto"><table>${head}<tbody>${body}</tbody></table></div>`;
 }
 
-function renderGrupo(grupo, tipo, prefix, usable, useAvatar, requiereClave){
+function renderGrupo(grupo, tipo, prefix, usable, useAvatar, requiereClave, extendida){
   const q=searchQ;
   const partesFiltradas = q&&!grupo.nombre.toLowerCase().includes(q) ? grupo.partes.filter(p=>p.pn.toLowerCase().includes(q)) : grupo.partes;
   if(q && !partesFiltradas.length) return '';
-  const totalUnidades = partesFiltradas.reduce((sum,p)=>sum+(p.cant||0),0);
+  const totalUnidades = partesFiltradas.reduce((sum,p)=>sum+(p.existencia||0),0);
   const isOpen=!!ex[prefix+grupo.nombre];
-  const st=calcGrupoStats([grupo]);
+  const st = extendida ? calcGrupoStats([grupo]) : calcGrupoStatsSimple([grupo]);
   const color=COLORS[grupo.nombre]||'#888';
   const izq = useAvatar
     ? `<div class="avatar">${initials(grupo.nombre)}</div>`
@@ -535,10 +480,11 @@ function renderGrupo(grupo, tipo, prefix, usable, useAvatar, requiereClave){
       </div>
       <div class="region-right">
         ${st.danger?`<span class="reg-badge danger">${st.danger}</span>`:''}
+        ${st.warn?`<span class="reg-badge warn">${st.warn}</span>`:''}
         <i class="ti ${isOpen?'ti-chevron-up':'ti-chevron-down'}" style="font-size:18px;color:#444"></i>
       </div>
     </div>
-    ${isOpen?tablaPartes(grupo,tipo,usable,requiereClave):''}
+    ${isOpen?tablaPartes(grupo,tipo,usable,requiereClave,extendida):''}
   </div>`;
 }
 
@@ -547,21 +493,21 @@ function render(){
   const q=searchQ;
   if(q) fijo = fijo.filter(g=>g.nombre.toLowerCase().includes(q)||g.partes.some(p=>p.pn.toLowerCase().includes(q)));
   document.getElementById('fijo-list').innerHTML = fijo.length
-    ? fijo.map(g=>renderGrupo(g,'STOCK FIJO','f_',true,true,false)).join('')
+    ? fijo.map(g=>renderGrupo(g,'STOCK FIJO','f_',false,true,false,false)).join('')
     : '<div class="empty"><i class="ti ti-user-off"></i>Sin resultados</div>';
   document.getElementById('f-tec').textContent=DATA.fijo.length;
 
   let reg = DATA.regional;
   if(q) reg = reg.filter(g=>g.nombre.toLowerCase().includes(q)||g.partes.some(p=>p.pn.toLowerCase().includes(q)));
   document.getElementById('regional-list').innerHTML = reg.length
-    ? reg.map(g=>renderGrupo(g,'STOCK REGIONAL','r_',true,false,true)).join('')
+    ? reg.map(g=>renderGrupo(g,'STOCK REGIONAL','r_',true,false,true,true)).join('')
     : '<div class="empty"><i class="ti ti-map-off"></i>Sin resultados</div>';
   document.getElementById('r-reg').textContent=DATA.regional.length;
 
   let mov = DATA.movil;
   if(q) mov = mov.filter(g=>g.nombre.toLowerCase().includes(q)||g.partes.some(p=>p.pn.toLowerCase().includes(q)));
   document.getElementById('movil-list').innerHTML = mov.length
-    ? mov.map(g=>renderGrupo(g,'STOCK MOVIL','m_',true,false,true)).join('')
+    ? mov.map(g=>renderGrupo(g,'STOCK MOVIL','m_',true,false,true,false)).join('')
     : '<div class="empty"><i class="ti ti-truck-off"></i>Sin resultados</div>';
   document.getElementById('m-mov').textContent=DATA.movil.length;
 }
@@ -579,9 +525,9 @@ function openModal(pn,base,tipo,cant){
   document.getElementById('m-pn').textContent=pn;
   document.getElementById('m-base').textContent=base+' · '+tipo;
   document.getElementById('m-qty').textContent=1;
-  document.getElementById('m-avail').innerHTML = 'asignadas: <span>'+cant+'</span>';
+  document.getElementById('m-avail').innerHTML = 'en existencia: <span>'+cant+'</span>';
   document.getElementById('m-atm').value='';
-  document.getElementById('m-tecnico').value = (tipo.includes('FIJO') && fijoSession) ? fijoSession.basestock : '';
+  document.getElementById('m-tecnico').value = '';
   document.getElementById('m-obs').value='';
   document.getElementById('m-email').value='deposito@prosegur.com';
   document.getElementById('confirm-btn').disabled=true;
@@ -604,7 +550,7 @@ function confirmar(){
   for(const g of DATA[curTipo.includes('FIJO')?'fijo':curTipo.includes('REGIONAL')?'regional':'movil']){
     if(g.nombre===curBase){
       const p=g.partes.find(x=>x.pn===curPn);
-      if(p){p.cant=Math.max(0,p.cant-curQty);resto=p.cant+' u';}
+      if(p){p.existencia=Math.max(0,p.existencia-curQty);resto=p.existencia+' u';}
     }
   }
   lastPedido={order:pendingOrder,pn:curPn,base:curBase,tipo:curTipo,qty:curQty,atm,tec,email,obs,fecha:fmtDate(),resto};
