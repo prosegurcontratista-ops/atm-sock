@@ -194,14 +194,7 @@ td{padding:10px 8px;white-space:nowrap}
     </div>
     <div class="mfield"><label>Part Number</label><div class="pn-display" id="m-pn">—</div></div>
     <div class="mfield"><label>Basestock · Tipo</label><div class="pn-display" id="m-base" style="color:#aaa;font-family:inherit;font-size:14px">—</div></div>
-    <div class="mfield"><label>Cantidad a usar</label>
-      <div class="qty-row">
-        <button class="qty-btn" onclick="changeQty(-1)">−</button>
-        <span class="qty-val" id="m-qty">1</span>
-        <button class="qty-btn" onclick="changeQty(1)">+</button>
-        <span class="qty-avail" id="m-avail">—</span>
-      </div>
-    </div>
+    <div class="mfield"><span class="qty-avail" id="m-avail">—</span></div>
     <div class="mfield"><label>N° de equipo ATM</label><input id="m-atm" placeholder="Ej: ATM-0421" oninput="checkForm()" autocomplete="off"></div>
     <div class="mfield"><label>Técnico responsable</label><input id="m-tecnico" placeholder="Nombre y apellido" oninput="checkForm()" autocomplete="off"></div>
     <div class="mfield"><label>Email de reposición</label><input id="m-email" type="email" value="deposito@prosegur.com" oninput="checkForm()"></div>
@@ -528,7 +521,6 @@ function openModal(pn,base,tipo,cant){
   document.getElementById('m-order').textContent=pendingOrder;
   document.getElementById('m-pn').textContent=pn;
   document.getElementById('m-base').textContent=base+' · '+tipo;
-  document.getElementById('m-qty').textContent=1;
   document.getElementById('m-avail').innerHTML = 'en existencia: <span>'+cant+'</span>';
   document.getElementById('m-atm').value='';
   document.getElementById('m-tecnico').value = '';
@@ -541,7 +533,6 @@ function openModal(pn,base,tipo,cant){
 }
 function closeModal(){document.getElementById('modal-overlay').classList.remove('open');}
 function handleOverlay(e){if(e.target===document.getElementById('modal-overlay'))closeModal();}
-function changeQty(d){curQty=Math.max(1,Math.min(curMax,curQty+d));document.getElementById('m-qty').textContent=curQty;}
 function checkForm(){const a=document.getElementById('m-atm').value.trim(),t=document.getElementById('m-tecnico').value.trim(),e=document.getElementById('m-email').value.trim();document.getElementById('confirm-btn').disabled=!(a&&t&&e);}
 
 let lastPedido=null;
