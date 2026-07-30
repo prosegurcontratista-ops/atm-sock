@@ -421,24 +421,27 @@ function calcGrupoStats(grupos){
   return {warn, danger};
 }
 
-function calcGrupoStatsSimple(grupos){
+function calcGrupoStatsSimple(grupos, campo){
+  campo = campo || 'existencia';
   let danger=0;
   grupos.forEach(g=>g.partes.forEach(p=>{
-    if((p.existencia||0)===0)danger++;
+    if((p[campo]||0)===0)danger++;
   }));
   return {warn:0, danger};
 }
 
 function tablaPartes(grupo, tipo, usable, requiereClave, extendida){
   const q=searchQ;
+  const esFijo = tipo.includes('FIJO');
   const partes = q&&!grupo.nombre.toLowerCase().includes(q) ? grupo.partes.filter(p=>p.pn.toLowerCase().includes(q)) : grupo.partes;
   let head = '<thead><tr><th style="font-size:12px">PN</th><th>DESCRIPCIÓN</th>';
   if(extendida) head += '<th style="text-align:center">QR</th><th style="text-align:center">ESTANTERÍA</th>';
-  head += '<th style="text-align:center">'+(tipo.includes('FIJO')?'CANTIDAD':'EXISTENCIA')+'</th>';
+  head += '<th style="text-align:center">'+(esFijo?'CANTIDAD ASIGNADA':'EXISTENCIA')+'</th>';
   if(usable) head += '<th style="text-align:center">USO</th>';
   head += '</tr></thead>';
   const body = partes.map((p,i)=>{
-    const e = extendida ? estado(p.existencia,p.cantmin) : ((p.existencia||0)===0?'danger':'ok');
+    const valor = esFijo ? p.cantmin : p.existencia;
+    const e = extendida ? estado(p.existencia,p.cantmin) : ((valor||0)===0?'danger':'ok');
     const col = e==='danger'?'#d32f2f':e==='warn'?'#B57400':'#1a1a2e';
     const bg = i%2===0?'#ffffff':'#FFF4D6';
     let row = `<tr style="background:${bg};border-bottom:0.5px solid #EAD080">`;
@@ -448,7 +451,7 @@ function tablaPartes(grupo, tipo, usable, requiereClave, extendida){
       row += `<td style="text-align:center;font-size:13px;color:#999;font-family:'Courier New',monospace">${p.qr||'—'}</td>`;
       row += `<td style="text-align:center;font-size:13px;color:#666">${p.estanteria||'—'}</td>`;
     }
-    row += `<td style="text-align:center;font-size:16px;font-weight:700;color:${col}">${p.existencia}</td>`;
+    row += `<td style="text-align:center;font-size:16px;font-weight:700;color:${col}">${valor}</td>`;
     if(usable){
       const pnEsc=p.pn.replace(/'/g,"\\'"), baseEsc=grupo.nombre.replace(/'/g,"\\'");
       const accion = requiereClave
@@ -466,9 +469,10 @@ function renderGrupo(grupo, tipo, prefix, usable, useAvatar, requiereClave, exte
   const q=searchQ;
   const partesFiltradas = q&&!grupo.nombre.toLowerCase().includes(q) ? grupo.partes.filter(p=>p.pn.toLowerCase().includes(q)) : grupo.partes;
   if(q && !partesFiltradas.length) return '';
-  const totalUnidades = partesFiltradas.reduce((sum,p)=>sum+(p.existencia||0),0);
+  const esFijo = tipo.includes('FIJO');
+  const totalUnidades = partesFiltradas.reduce((sum,p)=>sum+((esFijo?p.cantmin:p.existencia)||0),0);
   const isOpen=!!ex[prefix+grupo.nombre];
-  const st = extendida ? calcGrupoStats([grupo]) : calcGrupoStatsSimple([grupo]);
+  const st = esFijo ? calcGrupoStatsSimple([grupo],'cantmin') : (extendida ? calcGrupoStats([grupo]) : calcGrupoStatsSimple([grupo]));
   const color=COLORS[grupo.nombre]||'#888';
   const izq = useAvatar
     ? `<div class="avatar">${initials(grupo.nombre)}</div>`
@@ -605,4 +609,3 @@ function salirAInicio(){
 cargarDatos();
 </script>
 </body></html>
-
