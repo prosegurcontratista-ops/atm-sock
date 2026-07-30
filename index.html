@@ -434,7 +434,7 @@ function tablaPartes(grupo, tipo, usable, requiereClave, extendida){
   const partes = q&&!grupo.nombre.toLowerCase().includes(q) ? grupo.partes.filter(p=>p.pn.toLowerCase().includes(q)) : grupo.partes;
   let head = '<thead><tr><th style="font-size:12px">PN</th><th>DESCRIPCIÓN</th>';
   if(extendida) head += '<th style="text-align:center">QR</th><th style="text-align:center">ESTANTERÍA</th>';
-  head += '<th style="text-align:center">EXISTENCIA</th>';
+  head += '<th style="text-align:center">'+(tipo.includes('FIJO')?'CANTIDAD':'EXISTENCIA')+'</th>';
   if(usable) head += '<th style="text-align:center">USO</th>';
   head += '</tr></thead>';
   const body = partes.map((p,i)=>{
@@ -507,7 +507,7 @@ function render(){
   let mov = DATA.movil;
   if(q) mov = mov.filter(g=>g.nombre.toLowerCase().includes(q)||g.partes.some(p=>p.pn.toLowerCase().includes(q)));
   document.getElementById('movil-list').innerHTML = mov.length
-    ? mov.map(g=>renderGrupo(g,'STOCK MOVIL','m_',true,false,true,false)).join('')
+    ? mov.map(g=>renderGrupo(g,'STOCK MOVIL','m_',true,false,true,true)).join('')
     : '<div class="empty"><i class="ti ti-truck-off"></i>Sin resultados</div>';
   document.getElementById('m-mov').textContent=DATA.movil.length;
 }
@@ -605,3 +605,4 @@ function salirAInicio(){
 cargarDatos();
 </script>
 </body></html>
+
