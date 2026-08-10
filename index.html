@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#111124">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="PROSEGUR ATM">
+<title>PROSEGUR ATM · Stock</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.1.0/tabler-icons.min.css">
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;background:#F5C518;color:#1a1a2e;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;height:100%;overflow:hidden}
+#app{display:flex;flex-direction:column;height:100vh;height:100dvh;max-width:480px;margin:0 auto;background:#FFD633}
+.topbar{background:#1a1a2e;border-bottom:0.5px solid #C99A0A;padding:env(safe-area-inset-top,12px) 16px 10px;flex-shrink:0}
+.topbar-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.logo-area{display:flex;align-items:center;gap:7px}
+.logo-divider{width:1px;height:22px;background:#2a2a45}
+.logo-sub{font-size:13px;color:#eee;letter-spacing:.04em}
+.sync-badge{font-size:13px;border-radius:20px;padding:4px 10px;display:flex;align-items:center;gap:4px;border:0.5px solid;background:#1a2e1a;color:#4caf50;border-color:#2e4a2e}
+.sync-badge.syncing{background:#1a1400;color:#FFB800;border-color:#5a4400}
+.sync-badge.error{background:#1f0d0d;color:#ff4444;border-color:#5a2020}
+.search-box{display:flex;align-items:center;gap:8px;background:#fff;border-radius:10px;padding:9px 14px;border:0.5px solid #d0d3dc}
+.search-box input{background:none;border:none;outline:none;font-size:17px;color:#1a1a2e;width:100%}
+.search-box input::placeholder{color:#999}
+.search-box i{color:#999;font-size:20px}
+.tab-row{display:flex;border-bottom:0.5px solid #C99A0A;background:#FFD633;flex-shrink:0}
+.tab{flex:1;padding:12px 0;font-size:16px;font-weight:600;text-align:center;cursor:pointer;color:#7a5e00;border-bottom:2px solid transparent;user-select:none}
+.tab.active{color:#1a1a2e;border-bottom-color:#1a1a2e}
+.scroll-area{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;background:transparent}
+.scroll-area::-webkit-scrollbar{display:none}
+.stats-row{display:flex;justify-content:flex-start;gap:8px;padding:10px 12px 6px}
+.stats-row .stat{flex:0 0 auto;width:calc(33.33% - 6px)}
+.stat{background:#fff;border-radius:10px;padding:10px 6px;text-align:center;border:0.5px solid #D4A510;box-shadow:0 2px 4px rgba(140,95,0,0.15)}
+.stat-num{font-size:28px;font-weight:700;line-height:1}
+.stat-num.ok{color:#4caf50}.stat-num.warn{color:#FFB800}.stat-num.danger{color:#ff4444}
+.stat-lbl{font-size:12px;color:#888;margin-top:3px}
+.filter-row{display:flex;gap:6px;padding:0 12px 8px;overflow-x:auto}
+.filter-row::-webkit-scrollbar{display:none}
+.ftag{font-size:15px;border-radius:20px;padding:6px 15px;border:0.5px solid #C99A0A;white-space:nowrap;cursor:pointer;background:#fff;color:#7a5e00;user-select:none}
+.ftag.active{background:#1a1a2e;color:#F5C518;border-color:#1a1a2e}
+.section-label{font-size:12px;font-weight:600;color:#6B5200;padding:7px 14px 4px;letter-spacing:.07em;text-transform:uppercase}
+.region-card{margin:0 12px 10px;background:#fff;border:0.5px solid #D4A510;border-radius:12px;overflow:hidden;box-shadow:0 2px 5px rgba(140,95,0,0.18)}
+.region-header{display:flex;align-items:center;justify-content:space-between;padding:13px 12px;cursor:pointer;user-select:none}
+.region-header:active{background:#FFF4D6}
+.region-left{display:flex;align-items:center;gap:9px}
+.region-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+.avatar{width:42px;height:42px;border-radius:50%;background:#e8e6f7;border:1.5px solid #7F77DD;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#534AB7;flex-shrink:0}
+.region-name{font-size:17px;font-weight:600;color:#1a1a2e}
+.region-sub{font-size:14px;color:#888;margin-top:2px}
+.region-right{display:flex;align-items:center;gap:6px}
+.reg-badge{font-size:13px;border-radius:20px;padding:3px 10px}
+.reg-badge.warn{background:#1a1400;color:#FFB800}
+.reg-badge.danger{background:#1a0d0d;color:#ff4444}
+.navbar{display:flex;justify-content:space-around;padding:8px 0;padding-bottom:max(10px,env(safe-area-inset-bottom));border-top:0.5px solid #C99A0A;background:#FFD633;flex-shrink:0}
+.nav-item{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:12px;color:#7a5e00;cursor:pointer;padding:4px 12px;user-select:none}
+.nav-item.active{color:#1a1a2e}
+.nav-item i{font-size:28px}
+.empty{text-align:center;font-size:15px;color:#7a5e00;padding:30px 20px}
+.empty i{font-size:36px;display:block;margin-bottom:10px}
+.loading{text-align:center;padding:50px 20px;color:#7a5e00}
+.loading i{font-size:40px;display:block;margin-bottom:14px;color:#FFB800;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:100;align-items:flex-end;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal-sheet{background:#FFD633;border-radius:20px 20px 0 0;border-top:0.5px solid #C99A0A;padding:16px 16px max(24px,env(safe-area-inset-bottom));width:100%;max-width:480px;max-height:92vh;overflow-y:auto}
+.modal-handle{width:36px;height:4px;background:#2a2a45;border-radius:2px;margin:0 auto 16px}
+.modal-title{font-size:18px;font-weight:700;color:#1a1a2e;margin-bottom:3px}
+.modal-sub{font-size:14px;color:#6B5200;margin-bottom:16px}
+.mfield{margin-bottom:12px}
+.mfield label{font-size:12px;color:#6B5200;letter-spacing:.05em;text-transform:uppercase;display:block;margin-bottom:5px;font-weight:600}
+.mfield input,.mfield textarea{width:100%;background:#fff;border:0.5px solid #C99A0A;border-radius:10px;padding:11px 12px;font-size:15px;color:#1a1a2e;outline:none;resize:none;-webkit-appearance:none}
+.mfield input:focus,.mfield textarea:focus{border-color:#FFB800}
+.mfield input::placeholder,.mfield textarea::placeholder{color:#aaa}
+.order-box{background:#0d1a0d;border:0.5px solid #2e4a2e;border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.order-box i{font-size:22px;color:#4caf50;flex-shrink:0}
+.order-num{font-family:'Courier New',monospace;font-size:18px;font-weight:700;color:#4caf50;letter-spacing:1.5px}
+.pn-display{background:#fff;border:0.5px solid #C99A0A;border-radius:10px;padding:11px 12px;font-size:14px;color:#B57400;font-family:'Courier New',monospace}
+.qty-row{display:flex;align-items:center;gap:12px}
+.qty-btn{width:40px;height:40px;border-radius:10px;border:0.5px solid #C99A0A;background:#fff;color:#1a1a2e;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.qty-btn:active{background:#FFF4D6}
+.qty-val{font-size:26px;font-weight:700;color:#1a1a2e;min-width:36px;text-align:center}
+.qty-avail{font-size:13px;color:#6B5200}
+.qty-avail span{color:#FFB800}
+.confirm-btn{width:100%;padding:15px;border-radius:14px;background:#FFB800;color:#111;font-size:16px;font-weight:700;border:none;cursor:pointer;margin-top:8px}
+.confirm-btn:active{background:#e6a600}
+.confirm-btn:disabled{background:#2a2a2a;color:#555;cursor:not-allowed}
+.cancel-btn{width:100%;padding:12px;border-radius:14px;background:none;color:#6B5200;font-size:15px;border:none;cursor:pointer;margin-top:6px}
+.success-overlay{display:none;position:fixed;inset:0;background:#111124;z-index:200;overflow-y:auto}
+.success-overlay.open{display:block}
+.success-inner{padding:40px 20px max(32px,env(safe-area-inset-bottom));text-align:center;max-width:480px;margin:0 auto}
+.success-icon{width:64px;height:64px;border-radius:50%;background:#0d1a0d;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:30px;color:#4caf50}
+.success-title{font-size:22px;font-weight:700;color:#fff;margin-bottom:6px}
+.success-sub{font-size:14px;color:#666;margin-bottom:24px;line-height:1.6}
+.order-card{background:#0d0d1f;border:0.5px solid #2a2a45;border-radius:14px;padding:14px;margin-bottom:16px;text-align:left}
+.order-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:0.5px solid #EAD080}
+.order-row:last-child{border-bottom:none}
+.order-lbl{font-size:13px;color:#555}
+.order-val{font-size:13px;color:#ccc;font-weight:500}
+.order-val.yellow{color:#FFB800;font-family:'Courier New',monospace;font-size:15px;font-weight:700}
+.email-card{background:#0d1a0d;border:0.5px solid #2e4a2e;border-radius:14px;padding:13px 14px;display:flex;align-items:flex-start;gap:10px;margin-bottom:20px;text-align:left}
+.email-card i{color:#4caf50;font-size:22px;flex-shrink:0;margin-top:1px}
+.email-card-title{font-size:15px;color:#4caf50;font-weight:600}
+.email-card-sub{font-size:12px;color:#2e6e2e;margin-top:3px}
+.close-btn{width:100%;padding:15px;border-radius:14px;background:#FFB800;color:#111;font-size:16px;font-weight:700;border:none;cursor:pointer}
+.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);background:#FFB800;color:#111;font-size:14px;font-weight:700;padding:11px 22px;border-radius:20px;opacity:0;transition:all .3s;z-index:300;white-space:nowrap;pointer-events:none}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+table{width:100%;border-collapse:collapse;font-size:15px}
+thead tr{background:#FFD633}
+th{padding:9px 8px;text-align:left;color:#5a4500;font-weight:600;font-size:12px;letter-spacing:.05em;border-bottom:0.5px solid #2a2a45;white-space:nowrap}
+td{padding:10px 8px;white-space:nowrap}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="topbar">
+    <div class="topbar-row">
+      <div class="logo-area">
+        <span style="font-family:'Arial Black',Arial,sans-serif;font-weight:900;font-size:16px;color:#FFB800;letter-spacing:1.5px">PROSEGUR</span>
+        <div class="logo-divider"></div>
+        <span style="font-family:'Arial Black',Arial,sans-serif;font-weight:900;font-size:16px;color:#FFB800;letter-spacing:1.5px">STOCK</span>
+      </div>
+      <div class="sync-badge error" id="syncbadge" onclick="cargarDatos()">
+        <i class="ti ti-alert-triangle" id="syncicon"></i>
+        <span id="synctxt">Error</span>
+      </div>
+    </div>
+    <div class="search-box">
+      <i class="ti ti-search"></i>
+      <input id="searchinput" placeholder="PN, técnico o región..." oninput="onSearch(this.value)">
+    </div>
+  </div>
+
+  <div class="tab-row">
+    <div class="tab active" id="tab-fijo" onclick="switchTab('fijo')"><i class="ti ti-building-warehouse" style="font-size:15px;vertical-align:-2px;margin-right:3px"></i>Fijo</div>
+    <div class="tab" id="tab-regional" onclick="switchTab('regional')"><i class="ti ti-map-pin" style="font-size:15px;vertical-align:-2px;margin-right:3px"></i>Regional</div>
+    <div class="tab" id="tab-movil" onclick="switchTab('movil')"><i class="ti ti-truck" style="font-size:15px;vertical-align:-2px;margin-right:3px"></i>Móvil</div>
+  </div>
+
+  <div class="scroll-area">
+    <div id="pane-fijo">
+      <div class="stats-row">
+        <div class="stat"><div class="stat-num ok" id="f-tec">—</div><div class="stat-lbl">técnicos</div></div>
+      </div>
+      <div class="section-label">Técnicos — tocá para ver sus partes</div>
+      <div id="fijo-list"></div>
+    </div>
+
+    <div id="pane-regional" style="display:none">
+      <div class="stats-row">
+        <div class="stat"><div class="stat-num ok" id="r-reg">—</div><div class="stat-lbl">regiones</div></div>
+      </div>
+      <div class="section-label">Regiones</div>
+      <div id="regional-list"></div>
+    </div>
+
+    <div id="pane-movil" style="display:none">
+      <div class="stats-row">
+        <div class="stat"><div class="stat-num ok" id="m-mov">—</div><div class="stat-lbl">móviles</div></div>
+      </div>
+      <div class="section-label">Móviles</div>
+      <div id="movil-list"></div>
+    </div>
+  </div>
+
+  <div class="navbar">
+    <div class="nav-item active" onclick="switchTab('fijo')"><i class="ti ti-layout-list"></i><span>Stock</span></div>
+    <div class="nav-item" onclick="cargarDatos();showToast('Actualizando...')"><i class="ti ti-refresh"></i><span>Refrescar</span></div>
+    <div class="nav-item" onclick="abrirPedidos()"><i class="ti ti-history"></i><span>Pedidos</span></div>
+    <div class="nav-item" onclick="showToast('PROSEGUR ATM Stock v3')"><i class="ti ti-info-circle"></i><span>Info</span></div>
+  </div>
+</div>
+
+<!-- CLAVE REGIONAL/MOVIL -->
+<div class="modal-overlay" id="clave-overlay" onclick="handleClaveOverlay(event)">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Clave requerida</div>
+    <div class="modal-sub" id="clave-sub">Ingresá la clave para registrar uso</div>
+    <div class="mfield"><label>Clave</label><input id="clave-input" type="password" placeholder="••••••" autocomplete="off"></div>
+    <div id="clave-error" style="color:#d32f2f;font-size:13px;margin-bottom:8px;display:none"></div>
+    <button class="confirm-btn" onclick="verificarClave()">Confirmar</button>
+    <button class="cancel-btn" onclick="cerrarClave()">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal-overlay" onclick="handleOverlay(event)">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Registrar uso de parte</div>
+    <div class="modal-sub">Completá los datos para registrar el uso y pedir reposición</div>
+    <div class="mfield"><label>N° de pedido generado</label>
+      <div class="order-box"><i class="ti ti-clipboard-check"></i><span class="order-num" id="m-order">—</span></div>
+    </div>
+    <div class="mfield"><label>Part Number</label><div class="pn-display" id="m-pn">—</div></div>
+    <div class="mfield"><label>Basestock · Tipo</label><div class="pn-display" id="m-base" style="color:#aaa;font-family:inherit;font-size:14px">—</div></div>
+    <div class="mfield"><span class="qty-avail" id="m-avail">—</span></div>
+    <div class="mfield"><label>N° de equipo ATM</label><input id="m-atm" placeholder="Ej: ATM-0421" oninput="checkForm()" autocomplete="off"></div>
+    <div class="mfield"><label>Técnico responsable</label><input id="m-tecnico" placeholder="Nombre y apellido" oninput="checkForm()" autocomplete="off"></div>
+    <div class="mfield"><label>Email de reposición</label><input id="m-email" type="email" value="deposito@prosegur.com" oninput="checkForm()"></div>
+    <div class="mfield"><label>Observaciones (opcional)</label><textarea id="m-obs" rows="2" placeholder="Ej: cambio preventivo..."></textarea></div>
+    <button class="confirm-btn" id="confirm-btn" onclick="confirmar()" disabled>Confirmar uso y generar pedido</button>
+    <button class="cancel-btn" onclick="closeModal()">Cancelar</button>
+  </div>
+</div>
+
+<!-- SUCCESS -->
+<div class="success-overlay" id="success-overlay">
+  <div class="success-inner">
+    <div class="success-icon"><i class="ti ti-check"></i></div>
+    <div class="success-title">Parte registrada</div>
+    <div class="success-sub">Stock descontado localmente. Email de reposición preparado.</div>
+    <div class="order-card">
+      <div class="order-row"><span class="order-lbl">N° pedido</span><span class="order-val yellow" id="s-order">—</span></div>
+      <div class="order-row"><span class="order-lbl">Part Number</span><span class="order-val" id="s-pn">—</span></div>
+      <div class="order-row"><span class="order-lbl">Basestock</span><span class="order-val" id="s-base">—</span></div>
+      <div class="order-row"><span class="order-lbl">Cantidad usada</span><span class="order-val" id="s-qty">—</span></div>
+      <div class="order-row"><span class="order-lbl">Equipo ATM</span><span class="order-val" id="s-atm">—</span></div>
+      <div class="order-row"><span class="order-lbl">Técnico</span><span class="order-val" id="s-tec">—</span></div>
+      <div class="order-row"><span class="order-lbl">Stock restante</span><span class="order-val" id="s-resto">—</span></div>
+      <div class="order-row"><span class="order-lbl">Fecha</span><span class="order-val" id="s-fecha">—</span></div>
+    </div>
+    <div class="email-card">
+      <i class="ti ti-mail"></i>
+      <div>
+        <div class="email-card-title">Email de reposición</div>
+        <div class="email-card-sub" id="s-email">—</div>
+      </div>
+    </div>
+    <button class="close-btn" id="email-btn" onclick="abrirEmail()" style="margin-bottom:10px;background:#1a2e1a;color:#4caf50;border:0.5px solid #2e4a2e">
+      <i class="ti ti-mail" style="vertical-align:-2px;margin-right:4px"></i>Enviar email de reposición
+    </button>
+    <button class="close-btn" onclick="closeSuccess()">Volver al listado de partes</button>
+    <button class="cancel-btn" onclick="salirAInicio()">Salir a la página principal</button>
+  </div>
+</div>
+
+<!-- RESUMEN DE PEDIDOS -->
+<div class="success-overlay" id="pedidos-overlay">
+  <div class="success-inner" style="text-align:left;padding-top:24px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+      <div class="success-title" style="margin-bottom:0">Pedidos de esta sesión</div>
+      <span onclick="cerrarPedidos()" style="color:#888;font-size:26px;line-height:1;cursor:pointer;padding:4px 8px">×</span>
+    </div>
+    <div class="success-sub" style="text-align:left;margin-bottom:18px">Registro permanente de todos los usos confirmados.</div>
+    <div id="pedidos-list"></div>
+    <button class="close-btn" onclick="cerrarPedidos()" style="margin-top:14px">Cerrar</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── CONFIG ────────────────────────────────────────────────────────────────────
+// URL del Apps Script publicado (público, sin login de Google) en vez del export CSV directo
+const CSV_URL = "https://script.google.com/macros/s/AKfycbzt95ynXat8YJ0QtW-5_EFJxfZGj2QKuvSkCxIk_NYSLmYivLrNQIch22tVJAQRPlTc/exec";
+
+let DATA = {fijo:[], regional:[], movil:[]};
+let ff='todos', searchQ='', ex={};
+let curPn='', curBase='', curTipo='', curMax=0, curQty=1, curUnidades=0;
+let pendingOrder='';
+let pedidos=[];
+let claveePendiente = null;
+async function sha256Hex(str){
+  const enc = new TextEncoder().encode(str);
+  const buf = await crypto.subtle.digest('SHA-256', enc);
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+// ── UTILS ─────────────────────────────────────────────────────────────────────
+function estado(existencia,cantmin){return existencia===0?'danger':existencia<cantmin?'warn':'ok';}
+function genOrder(){return 'PED-'+new Date().getFullYear()+'-'+String(Math.floor(Math.random()*9000+1000));}
+function fmtDate(){return new Date().toLocaleString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});}
+function initials(name){return name.split(',')[0].trim().split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();}
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
+
+// ── PARSEAR CSV (maneja comas dentro de campos con comillas) ──────────────────
+function parseCSVLine(line){
+  const result=[];
+  let cur='', inQuotes=false;
+  for(let i=0;i<line.length;i++){
+    const ch=line[i];
+    if(ch==='"'){
+      if(inQuotes && line[i+1]==='"'){cur+='"';i++;}
+      else inQuotes=!inQuotes;
+    } else if(ch===',' && !inQuotes){
+      result.push(cur); cur='';
+    } else {
+      cur+=ch;
+    }
+  }
+  result.push(cur);
+  return result;
+}
+
+function parseCSV(text){
+  const rawLines=[];
+  let cur='', inQ=false;
+  for(let i=0;i<text.length;i++){
+    const ch=text[i];
+    if(ch==='"'){inQ=!inQ;cur+=ch;}
+    else if((ch==='\n'||ch==='\r')&&!inQ){
+      if(ch==='\r'&&text[i+1]==='\n')i++;
+      if(cur.trim())rawLines.push(cur);
+      cur='';
+    } else cur+=ch;
+  }
+  if(cur.trim())rawLines.push(cur);
+  if(!rawLines.length) return [];
+
+  const headers = parseCSVLine(rawLines[0]).map(h=>h.trim().toUpperCase());
+  const idx = {
+    pn: headers.indexOf('PN'),
+    qr: headers.indexOf('QR'),
+    descripcion: headers.indexOf('DESCRIPCION'),
+    base: headers.indexOf('BASESTOCK'),
+    tipo: headers.indexOf('TIPO'),
+    cantmin: headers.indexOf('CANTMINIMA'),
+    estanteria: headers.indexOf('ESTANTERIA'),
+    existencia: headers.indexOf('EXISTENCIA'),
+  };
+  const rows = [];
+  for(let i=1;i<rawLines.length;i++){
+    const cols = parseCSVLine(rawLines[i]);
+    if(cols.length < 3) continue;
+    const pn = (cols[idx.pn]||'').trim();
+    const qr = idx.qr>=0 ? (cols[idx.qr]||'').trim() : '';
+    const descripcion = idx.descripcion>=0 ? (cols[idx.descripcion]||'').trim() : '';
+    const base = (cols[idx.base]||'').trim();
+    const tipo = (cols[idx.tipo]||'').trim().toUpperCase();
+    const cantmin = idx.cantmin>=0 ? (parseInt(cols[idx.cantmin])||0) : 0;
+    const estanteria = idx.estanteria>=0 ? (cols[idx.estanteria]||'').trim() : '';
+    const existencia = idx.existencia>=0 ? (parseInt(cols[idx.existencia])||0) : 0;
+    if(!pn||!base||!tipo) continue;
+    rows.push({pn, qr, descripcion, base, tipo, cantmin, estanteria, existencia});
+  }
+  return rows;
+}
+
+function agrupar(rows){
+  const fijo={}, regional={}, movil={};
+  rows.forEach(r=>{
+    let target;
+    if(r.tipo.includes('FIJO')) target=fijo;
+    else if(r.tipo.includes('REGIONAL')) target=regional;
+    else if(r.tipo.includes('MOVIL')) target=movil;
+    else return;
+    if(!target[r.base]) target[r.base]={nombre:r.base, partes:[]};
+    target[r.base].partes.push(r);
+  });
+  const toArr=o=>Object.values(o).sort((a,b)=>a.nombre.localeCompare(b.nombre));
+  return {fijo:toArr(fijo), regional:toArr(regional), movil:toArr(movil)};
+}
+
+// ── CARGAR DATOS ──────────────────────────────────────────────────────────────
+async function cargarDatos(){
+  const b=document.getElementById('syncbadge'), ic=document.getElementById('syncicon'), t=document.getElementById('synctxt');
+  b.className='sync-badge syncing'; ic.className='ti ti-refresh'; t.textContent='Cargando...';
+  ['fijo','regional','movil'].forEach(p=>{
+    document.getElementById(p+'-list').innerHTML='<div class="loading"><i class="ti ti-loader-2"></i>Cargando datos...</div>';
+  });
+  try{
+    const resp = await fetch(CSV_URL + '?action=stock&t=' + Date.now());
+    if(!resp.ok) throw new Error('HTTP '+resp.status);
+    const text = await resp.text();
+    const rows = parseCSV(text);
+    if(!rows.length) throw new Error('Sin datos');
+    const ag = agrupar(rows);
+    DATA.fijo = ag.fijo;
+    DATA.regional = ag.regional;
+    DATA.movil = ag.movil;
+    b.className='sync-badge'; ic.className='ti ti-check'; t.textContent='Actualizado';
+    render();
+    showToast('Datos actualizados');
+  }catch(err){
+    b.className='sync-badge error'; ic.className='ti ti-alert-triangle'; t.textContent='Error';
+    ['fijo','regional','movil'].forEach(p=>{
+      document.getElementById(p+'-list').innerHTML='<div class="empty"><i class="ti ti-cloud-off"></i>No se pudo cargar.<br>Revisá la conexión y tocá "Actualizar".<br><br><span style="font-size:11px;color:#555">'+err.message+'</span></div>';
+    });
+  }
+}
+
+// ── CLAVE REGIONAL/MÓVIL (para registrar uso) ──────────────────────────────────
+function pedirClave(pn, base, tipo, cant){
+  claveePendiente = {pn, base, tipo, cant};
+  document.getElementById('clave-sub').textContent = 'Ingresá la clave de '+base+' para registrar uso';
+  document.getElementById('clave-input').value='';
+  document.getElementById('clave-error').style.display='none';
+  document.getElementById('clave-overlay').classList.add('open');
+  setTimeout(()=>document.getElementById('clave-input').focus(),300);
+}
+function cerrarClave(){
+  document.getElementById('clave-overlay').classList.remove('open');
+  claveePendiente = null;
+}
+function handleClaveOverlay(e){ if(e.target===document.getElementById('clave-overlay')) cerrarClave(); }
+
+async function verificarClave(){
+  if(!claveePendiente) return;
+  const clave = document.getElementById('clave-input').value;
+  const err = document.getElementById('clave-error');
+  if(!clave){ err.textContent='Ingresá la clave'; err.style.display='block'; return; }
+  const hash = await sha256Hex(clave);
+  const tipoParam = claveePendiente.tipo.includes('REGIONAL') ? 'REGIONAL' : 'MOVIL';
+  try{
+    const resp = await fetch(CSV_URL+'?action=verificarclave&tipo='+tipoParam+'&basestock='+encodeURIComponent(claveePendiente.base)+'&hash='+hash+'&t='+Date.now());
+    const data = await resp.json();
+    if(!data.ok){ err.textContent='Clave incorrecta'; err.style.display='block'; return; }
+    const p = claveePendiente;
+    cerrarClave();
+    openModal(p.pn, p.base, p.tipo, p.cant);
+  }catch(e){
+    err.textContent='Error de conexión, probá de nuevo';
+    err.style.display='block';
+  }
+}
+
+// ── RENDER ────────────────────────────────────────────────────────────────────
+const COLORS={'SR Cordoba':'#378ADD','Stock Cordoba':'#378ADD','SR Mar Del Plata':'#E91E63','Stock Mar Del Plata':'#E91E63','SR Mendoza':'#FFB800','Stock Mendoza':'#FFB800','SR Patagonia':'#607D8B','Stock Patagonia':'#607D8B','SR Posadas':'#FF5722','Stock Posadas':'#FF5722','SR Resistencia':'#9C27B0','Stock Resistencia':'#9C27B0','SR Rosario':'#4caf50','Stock Rosario':'#4caf50','SR Santa Fe':'#00BCD4','Stock Santa Fe':'#00BCD4','SR Tucuman':'#D85A30','Stock Tucuman':'#D85A30','Stock Movil 1':'#FFB800','Stock Movil 2':'#378ADD','Stock Movil 3':'#4caf50'};
+
+function calcGrupoStats(grupos){
+  let warn=0, danger=0;
+  grupos.forEach(g=>g.partes.forEach(p=>{
+    const e=estado(p.existencia,p.cantmin);
+    if(e==='warn')warn++; if(e==='danger')danger++;
+  }));
+  return {warn, danger};
+}
+
+function calcGrupoStatsSimple(grupos, campo){
+  campo = campo || 'existencia';
+  let danger=0;
+  grupos.forEach(g=>g.partes.forEach(p=>{
+    if((p[campo]||0)===0)danger++;
+  }));
+  return {warn:0, danger};
+}
+
+function tablaPartes(grupo, tipo, usable, requiereClave, extendida){
+  const q=searchQ;
+  const esFijo = tipo.includes('FIJO');
+  const partes = q&&!grupo.nombre.toLowerCase().includes(q) ? grupo.partes.filter(p=>p.pn.toLowerCase().includes(q)) : grupo.partes;
+  let head = '<thead><tr><th style="font-size:12px">PN</th><th>DESCRIPCIÓN</th>';
+  if(extendida) head += '<th style="text-align:center">QR</th><th style="text-align:center">ESTANTERÍA</th>';
+  head += '<th style="text-align:center">'+(esFijo?'CANTIDAD ASIGNADA':'EXISTENCIA')+'</th>';
+  if(usable) head += '<th style="text-align:center">USO</th>';
+  head += '</tr></thead>';
+  const body = partes.map((p,i)=>{
+    const valor = esFijo ? p.cantmin : p.existencia;
+    const e = extendida ? estado(p.existencia,p.cantmin) : ((valor||0)===0?'danger':'ok');
+    const col = e==='danger'?'#d32f2f':e==='warn'?'#B57400':'#1a1a2e';
+    const bg = i%2===0?'#ffffff':'#FFF4D6';
+    let row = `<tr style="background:${bg};border-bottom:0.5px solid #EAD080">`;
+    row += `<td style="font-family:'Courier New',monospace;font-size:16px;font-weight:700;color:#B57400">${p.pn}</td>`;
+    row += `<td style="font-size:13px;color:#555;max-width:160px;white-space:normal">${p.descripcion||'—'}</td>`;
+    if(extendida){
+      row += `<td style="text-align:center;font-size:13px;color:#999;font-family:'Courier New',monospace">${p.qr||'—'}</td>`;
+      row += `<td style="text-align:center;font-size:13px;color:#666">${p.estanteria||'—'}</td>`;
+    }
+    row += `<td style="text-align:center;font-size:16px;font-weight:700;color:${col}">${valor}</td>`;
+    if(usable){
+      const pnEsc=p.pn.replace(/'/g,"\\'"), baseEsc=grupo.nombre.replace(/'/g,"\\'");
+      const accion = requiereClave
+        ? `pedirClave('${pnEsc}','${baseEsc}','${tipo}',${p.existencia})`
+        : `openModal('${pnEsc}','${baseEsc}','${tipo}',${p.existencia})`;
+      row += `<td style="text-align:center"><button class="ftag" style="background:#1a1600;color:#FFB800;border-color:#5a4400;font-size:13px;padding:6px 12px" onclick="${accion}">🔧 Usar</button></td>`;
+    }
+    row += '</tr>';
+    return row;
+  }).join('');
+  return `<div style="overflow-x:auto"><table>${head}<tbody>${body}</tbody></table></div>`;
+}
+
+function renderGrupo(grupo, tipo, prefix, usable, useAvatar, requiereClave, extendida){
+  const q=searchQ;
+  const partesFiltradas = q&&!grupo.nombre.toLowerCase().includes(q) ? grupo.partes.filter(p=>p.pn.toLowerCase().includes(q)) : grupo.partes;
+  if(q && !partesFiltradas.length) return '';
+  const esFijo = tipo.includes('FIJO');
+  const totalUnidades = partesFiltradas.reduce((sum,p)=>sum+((esFijo?p.cantmin:p.existencia)||0),0);
+  const isOpen=!!ex[prefix+grupo.nombre];
+  const st = esFijo ? calcGrupoStatsSimple([grupo],'cantmin') : (extendida ? calcGrupoStats([grupo]) : calcGrupoStatsSimple([grupo]));
+  const color=COLORS[grupo.nombre]||'#888';
+  const izq = useAvatar
+    ? `<div class="avatar">${initials(grupo.nombre)}</div>`
+    : `<div class="region-dot" style="background:${color}"></div>`;
+  return `<div class="region-card">
+    <div class="region-header" onclick="tog('${prefix}','${encodeURIComponent(grupo.nombre)}')">
+      <div class="region-left">${izq}
+        <div><div class="region-name">${grupo.nombre}</div><div class="region-sub">${totalUnidades} unidades</div></div>
+      </div>
+      <div class="region-right">
+        ${st.danger?`<span class="reg-badge danger">${st.danger}</span>`:''}
+        ${st.warn?`<span class="reg-badge warn">${st.warn}</span>`:''}
+        <i class="ti ${isOpen?'ti-chevron-up':'ti-chevron-down'}" style="font-size:18px;color:#444"></i>
+      </div>
+    </div>
+    ${isOpen?tablaPartes(grupo,tipo,usable,requiereClave,extendida):''}
+  </div>`;
+}
+
+function render(){
+  let fijo = DATA.fijo;
+  const q=searchQ;
+  if(q) fijo = fijo.filter(g=>g.nombre.toLowerCase().includes(q)||g.partes.some(p=>p.pn.toLowerCase().includes(q)));
+  document.getElementById('fijo-list').innerHTML = fijo.length
+    ? fijo.map(g=>renderGrupo(g,'STOCK FIJO','f_',false,true,false,false)).join('')
+    : '<div class="empty"><i class="ti ti-user-off"></i>Sin resultados</div>';
+  document.getElementById('f-tec').textContent=DATA.fijo.length;
+
+  let reg = DATA.regional;
+  if(q) reg = reg.filter(g=>g.nombre.toLowerCase().includes(q)||g.partes.some(p=>p.pn.toLowerCase().includes(q)));
+  document.getElementById('regional-list').innerHTML = reg.length
+    ? reg.map(g=>renderGrupo(g,'STOCK REGIONAL','r_',true,false,true,true)).join('')
+    : '<div class="empty"><i class="ti ti-map-off"></i>Sin resultados</div>';
+  document.getElementById('r-reg').textContent=DATA.regional.length;
+
+  let mov = DATA.movil;
+  if(q) mov = mov.filter(g=>g.nombre.toLowerCase().includes(q)||g.partes.some(p=>p.pn.toLowerCase().includes(q)));
+  document.getElementById('movil-list').innerHTML = mov.length
+    ? mov.map(g=>renderGrupo(g,'STOCK MOVIL','m_',true,false,true,true)).join('')
+    : '<div class="empty"><i class="ti ti-truck-off"></i>Sin resultados</div>';
+  document.getElementById('m-mov').textContent=DATA.movil.length;
+}
+
+function tog(prefix,nameEnc){const k=prefix+decodeURIComponent(nameEnc);ex[k]=!ex[k];render();}
+function setFF(f,el){ff=f;document.querySelectorAll('#pane-fijo .ftag').forEach(t=>t.classList.remove('active'));el.classList.add('active');render();}
+function onSearch(v){searchQ=v.toLowerCase();render();}
+function switchTab(t){['fijo','regional','movil'].forEach(x=>{document.getElementById('tab-'+x).classList.toggle('active',x===t);document.getElementById('pane-'+x).style.display=x===t?'block':'none';});}
+
+// ── MODAL ─────────────────────────────────────────────────────────────────────
+function openModal(pn,base,tipo,cant){
+  curPn=pn;curBase=base;curTipo=tipo;curMax=cant>0?cant:99;curQty=1;curUnidades=cant;
+  pendingOrder=genOrder();
+  document.getElementById('m-order').textContent=pendingOrder;
+  document.getElementById('m-pn').textContent=pn;
+  document.getElementById('m-base').textContent=base+' · '+tipo;
+  document.getElementById('m-avail').innerHTML = 'en existencia: <span>'+cant+'</span>';
+  document.getElementById('m-atm').value='';
+  document.getElementById('m-tecnico').value = '';
+  document.getElementById('m-obs').value='';
+  document.getElementById('m-email').value='deposito@prosegur.com';
+  document.getElementById('confirm-btn').disabled=true;
+  document.getElementById('modal-overlay').classList.add('open');
+  setTimeout(()=>document.getElementById('m-atm').focus(),300);
+  checkForm();
+}
+function closeModal(){document.getElementById('modal-overlay').classList.remove('open');}
+function handleOverlay(e){if(e.target===document.getElementById('modal-overlay'))closeModal();}
+function checkForm(){const a=document.getElementById('m-atm').value.trim(),t=document.getElementById('m-tecnico').value.trim(),e=document.getElementById('m-email').value.trim();document.getElementById('confirm-btn').disabled=!(a&&t&&e);}
+
+let lastPedido=null;
+function confirmar(){
+  const atm=document.getElementById('m-atm').value.trim();
+  const tec=document.getElementById('m-tecnico').value.trim();
+  const email=document.getElementById('m-email').value.trim();
+  const obs=document.getElementById('m-obs').value.trim();
+  let resto='—';
+  for(const g of DATA[curTipo.includes('FIJO')?'fijo':curTipo.includes('REGIONAL')?'regional':'movil']){
+    if(g.nombre===curBase){
+      const p=g.partes.find(x=>x.pn===curPn);
+      if(p){p.existencia=Math.max(0,p.existencia-curQty);resto=p.existencia+' u';}
+    }
+  }
+  lastPedido={order:pendingOrder,pn:curPn,base:curBase,tipo:curTipo,qty:curQty,atm,tec,email,obs,fecha:fmtDate(),resto};
+  pedidos.push(lastPedido);
+  guardarPedidoServidor(lastPedido);
+  document.getElementById('s-order').textContent=pendingOrder;
+  document.getElementById('s-pn').textContent=curPn;
+  document.getElementById('s-base').textContent=curBase;
+  document.getElementById('s-qty').textContent=curQty+' u';
+  document.getElementById('s-atm').textContent=atm;
+  document.getElementById('s-tec').textContent=tec;
+  document.getElementById('s-resto').textContent=resto;
+  document.getElementById('s-fecha').textContent=lastPedido.fecha;
+  document.getElementById('s-email').textContent=email;
+  closeModal();
+  document.getElementById('success-overlay').classList.add('open');
+  render();
+}
+
+async function guardarPedidoServidor(p){
+  try{
+    const params = new URLSearchParams({
+      action:'registrarpedido', orden:p.order, pn:p.pn, base:p.base, tipo:p.tipo,
+      atm:p.atm, tec:p.tec, email:p.email, obs:p.obs||''
+    });
+    await fetch(CSV_URL+'?'+params.toString());
+  }catch(e){
+    // si falla la conexión, el pedido queda igual visible en esta sesión (array local)
+  }
+}
+
+function abrirEmail(){
+  if(!lastPedido)return;
+  const p=lastPedido;
+  const asunto=encodeURIComponent('Reposición requerida: '+p.pn+' ('+p.order+')');
+  const cuerpo=encodeURIComponent(
+    'Solicitud de reposición de repuesto\n\n'+
+    'N° Pedido: '+p.order+'\n'+
+    'Part Number: '+p.pn+'\n'+
+    'Basestock: '+p.base+'\n'+
+    'Tipo: '+p.tipo+'\n'+
+    'Cantidad usada: '+p.qty+'\n'+
+    'Equipo ATM: '+p.atm+'\n'+
+    'Técnico: '+p.tec+'\n'+
+    'Stock restante: '+p.resto+'\n'+
+    'Fecha: '+p.fecha+'\n'+
+    (p.obs?'Observaciones: '+p.obs+'\n':'')
+  );
+  window.location.href='mailto:'+p.email+'?subject='+asunto+'&body='+cuerpo;
+}
+
+function closeSuccess(){document.getElementById('success-overlay').classList.remove('open');}
+
+function salirAInicio(){
+  document.getElementById('success-overlay').classList.remove('open');
+  ex = {};
+  searchQ = '';
+  document.getElementById('searchinput').value = '';
+  render();
+  switchTab('fijo');
+  document.querySelector('.scroll-area').scrollTop = 0;
+}
+
+// ── RESUMEN DE PEDIDOS ──────────────────────────────────────────────────────────
+function renderPedidosList(lista){
+  const cont = document.getElementById('pedidos-list');
+  if(!lista.length){
+    cont.innerHTML = '<div class="empty" style="padding:30px 0"><i class="ti ti-clipboard-off"></i>Todavía no hay pedidos registrados.</div>';
+    return;
+  }
+  const filas = lista.map(p => `
+    <div class="order-card">
+      <div class="order-row"><span class="order-lbl">N° pedido</span><span class="order-val yellow">${p.order||p.orden}</span></div>
+      <div class="order-row"><span class="order-lbl">Part Number</span><span class="order-val">${p.pn}</span></div>
+      <div class="order-row"><span class="order-lbl">Basestock</span><span class="order-val">${p.base}</span></div>
+      <div class="order-row"><span class="order-lbl">Tipo</span><span class="order-val">${p.tipo}</span></div>
+      <div class="order-row"><span class="order-lbl">Equipo ATM</span><span class="order-val">${p.atm}</span></div>
+      <div class="order-row"><span class="order-lbl">Técnico</span><span class="order-val">${p.tec}</span></div>
+      <div class="order-row"><span class="order-lbl">Fecha</span><span class="order-val">${p.fecha}</span></div>
+    </div>`).join('');
+  cont.innerHTML = `<div style="font-size:13px;color:#666;margin-bottom:10px">${lista.length} pedido${lista.length===1?'':'s'} en total</div>` + filas;
+}
+
+async function abrirPedidos(){
+  document.getElementById('pedidos-overlay').classList.add('open');
+  document.getElementById('pedidos-list').innerHTML = '<div class="loading"><i class="ti ti-loader-2"></i>Cargando pedidos...</div>';
+  try{
+    const resp = await fetch(CSV_URL+'?action=listarpedidos&t='+Date.now());
+    const data = await resp.json();
+    if(data.ok){
+      renderPedidosList(data.pedidos);
+    } else {
+      renderPedidosList(pedidos.slice().reverse());
+    }
+  }catch(e){
+    renderPedidosList(pedidos.slice().reverse());
+  }
+}
+function cerrarPedidos(){
+  document.getElementById('pedidos-overlay').classList.remove('open');
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+cargarDatos();
+</script>
+</body></html>
